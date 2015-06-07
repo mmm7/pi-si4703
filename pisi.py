@@ -21,6 +21,27 @@ class PiSi(object):
     self._reg[11] = (self._reg[11] & 0xF0) | (vol & 0x0F)
     self._WriteRegisters()
 
+  def Tune(self, freq_mhz):
+    # If BAND 05h[7:6] = 00, then
+    #   Freq (MHz) = Spacing (MHz) x Channel + 87.5 MHz.
+    # If BAND 05h[7:6] = 01, BAND 05h[7:6] = 10, then
+    #   Freq (MHz) = Spacing (MHz) x Channel + 76 MHz.
+    freq_khz = int(freq_mhz * 1000)
+    channel = (freq_khz - self._bandstart) / self._spacing
+    assert channel >= 0, (
+        "Channel out or range. [%f, %d, %d]" %
+        (freq_mhz, self._bandstart, self._spacing))
+    assert channel < 512, (
+        "Channel out or range. [%f, %d, %d]" %
+        (freq_mhz, self._bandstart, self._spacing))
+    # Set TUNE.
+    self._SetRegister(3, 0x8000 + channel)
+    self._WriteRegisters()
+    self._clock.sleep(1)
+    # Unset TUNE.
+    self._SetRegister(3, 0x0000 + channel)
+    self._WriteRegisters()
+
   @staticmethod
   def _InitGPIO(GPIO, control_gpio, clock):
     GPIO.setmode(GPIO.BCM) #board numbering
@@ -47,18 +68,28 @@ class PiSi(object):
 
   def _SetUpRegion(self):
     if self._region == PiSi.USA:
+      self._spacing = 200
+      self._bandstart = 87500
       self._SetRegister(4, 0x0000)
       self._SetRegister(5, 0x0000)
     elif self._region == PiSi.EUROPE:
+      self._spacing = 100
+      self._bandstart = 87500
       self._SetRegister(4, 0x0800)
       self._SetRegister(5, 0x0010)
     elif self._region == PiSi.AUSTRALIA:
+      self._spacing = 200
+      self._bandstart = 87500
       self._SetRegister(4, 0x0800)
       self._SetRegister(5, 0x0000)
     elif self._region == PiSi.JAPAN:
+      self._spacing = 100
+      self._bandstart = 76000
       self._SetRegister(4, 0x0800)
       self._SetRegister(5, 0x0090)
     elif self._region == PiSi.JAPAN_WIDE:
+      self._spacing = 100
+      self._bandstart = 76000
       self._SetRegister(4, 0x0800)
       self._SetRegister(5, 0x0050)
     self._WriteRegisters()

@@ -98,3 +98,28 @@ class PiSiTest(unittest.TestCase):
 
     self.pisi.SetVolume(0)
     self.assertEquals(oldreg, self._i2c.reg)
+
+  def testTune(self):
+    oldreg = list(self._i2c.reg)
+
+    self.pisi.Tune(100.7)
+    self.assertEquals(self._i2c.reg[6], 0x00)
+    self.assertEquals(self._i2c.reg[7], 132)
+    self.assertEquals(oldreg[0:6], self._i2c.reg[0:6])
+    self.assertEquals(oldreg[8:], self._i2c.reg[8:])
+
+    self.pisi.Tune(87.5)
+    self.assertEquals(self._i2c.reg[6], 0x00)
+    self.assertEquals(self._i2c.reg[7], 0)
+    self.assertEquals(oldreg[0:6], self._i2c.reg[0:6])
+    self.assertEquals(oldreg[8:], self._i2c.reg[8:])
+
+    self.pisi.Tune(108.0)
+    self.assertEquals(self._i2c.reg[6], 0x00)
+    self.assertEquals(self._i2c.reg[7], 205)
+    self.assertEquals(oldreg[0:6], self._i2c.reg[0:6])
+    self.assertEquals(oldreg[8:], self._i2c.reg[8:])
+
+    with self.assertRaises(AssertionError) as context:
+      self.pisi.Tune(87.3)
+    self.assertIn('Channel out or range', str(context.exception))
