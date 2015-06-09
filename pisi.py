@@ -19,7 +19,7 @@ class PiSi(object):
 
   def SetVolume(self, vol):
     self._reg[11] = (self._reg[11] & 0xF0) | (vol & 0x0F)
-    self._WriteRegisters()
+    self._WriteRegisters(5)
 
   def Tune(self, freq_mhz):
     # If BAND 05h[7:6] = 00, then
@@ -36,11 +36,11 @@ class PiSi(object):
         (freq_mhz, self._bandstart, self._spacing))
     # Set TUNE.
     self._SetRegister(3, 0x8000 + channel)
-    self._WriteRegisters()
+    self._WriteRegisters(3)
     self._clock.sleep(1)
     # Unset TUNE.
     self._SetRegister(3, 0x0000 + channel)
-    self._WriteRegisters()
+    self._WriteRegisters(3)
 
   @staticmethod
   def _InitGPIO(GPIO, control_gpio, clock):
@@ -59,12 +59,12 @@ class PiSi(object):
   def _Initialize(self):
     # Initialize oscillator.
     self._SetRegister(7, 0x8100)
-    self._WriteRegisters()
+    self._WriteRegisters(7)
     self._clock.sleep(1)
 
     #write x4001 to reg 2 to turn off mute and activate IC
     self._SetRegister(2, 0x4001)
-    self._WriteRegisters()
+    self._WriteRegisters(2)
 
   def _SetUpRegion(self):
     if self._region == PiSi.USA:
@@ -92,7 +92,7 @@ class PiSi(object):
       self._bandstart = 76000
       self._SetRegister(4, 0x0800)
       self._SetRegister(5, 0x0050)
-    self._WriteRegisters()
+    self._WriteRegisters(5)
     
   def _SetRegister(self, reg, value):
     assert reg >=2, "Register %d out of ragne for writing."
@@ -100,6 +100,12 @@ class PiSi(object):
     self._reg[reg*2 + 0] = (value >> 8) & 0xFF
     self._reg[reg*2 + 1] = (value     ) & 0xFF
 
-  def _WriteRegisters(self):
-    self._i2c.write_i2c_block_data(self._address, self._reg[4], self._reg[5:16])
+  def _WriteRegisters(self, maxreg):
+    assert maxreg >= 2
+    assert maxreg <= 7
+    max = maxreg * 2 + 2
+    #print (self._reg)
+    print (self._reg[4:max])
+    self._i2c.write_i2c_block_data(
+        self._address, self._reg[4], self._reg[5:max])
     self._clock.sleep(.1) 
